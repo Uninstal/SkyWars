@@ -1,10 +1,11 @@
 package org.uninstal.skywars.events;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.uninstal.skywars.data.Game;
 
-public class GameQuitEvent extends Event {
+public class GameQuitEvent extends Event implements GameEvent {
 	
 	private static HandlerList handlerList = new HandlerList();
 	
@@ -18,12 +19,22 @@ public class GameQuitEvent extends Event {
 	}
 	
 	private Game game;
+	private Player player;
 	
-	public GameQuitEvent() {
-		// TODO: event
+	public GameQuitEvent(Game game, Player player) {
+		this.game = game;
+		this.player = player;
 	}
 	
 	public Game getGame() {
 		return game;
+	}
+	
+	public Player getPlayer() {
+		return player;
+	}
+	
+	public int getNewSize() {
+		return game.getPlayers().size() - 1;
 	}
 }

@@ -4,43 +4,69 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.uninstal.skywars.util.Messenger;
 import org.uninstal.skywars.util.Utils;
+import org.uninstal.skywars.util.Values;
 
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class GameMap {
 	
-	private final String id;
+	private final Game game;
 	private final Area area;
 	private List<Point> points;
 	private List<Chest> chests;
+	private List<Item> drops;
+	private List<Block> blocks;
 	
-	public GameMap(String id, Area area, List<Point> points, List<Chest> chests) {
-		this.id = id;
+	public GameMap(Game game, Area area, List<Point> points, List<Chest> chests) {
+		this.game = game;
 		this.area = area;
 		this.chests = chests;
 		this.points = points;
+		this.drops = new ArrayList<>();
 	}
 	
-	public GameMap(String id, Area area, List<Point> points) {
-		this.id = id;
+	public GameMap(Game game, Area area, List<Point> points) {
+		this.game = game;
 		this.area = area;
 		this.chests = new ArrayList<>();
 		this.points = points;
+		this.drops = new ArrayList<>();
 	}
 	
-	public GameMap(String id, Area area) {
-		this.id = id;
+	public GameMap(Game game, Area area) {
+		this.game = game;
 		this.area = area;
 		this.chests = new ArrayList<>();
 		this.points = new ArrayList<>();
+		this.drops = new ArrayList<>();
 	}
 	
-	public String getId() {
-		return id;
+	public GameMap(Game game) {
+		this.game = game;
+		this.area = null;
+		this.chests = new ArrayList<>();
+		this.points = new ArrayList<>();
+		this.drops = new ArrayList<>();
+	}
+	
+	public boolean isConfigured() {
+		
+		return area != null
+			&& points.size() > 1
+			&& chests.size() > 1;
+	}
+	
+	public Game getGame() {
+		return game;
 	}
 	
 	public Area getArea() {
@@ -71,12 +97,66 @@ public class GameMap {
 		points.add(new Point(location));
 	}
 	
+	public void handleDrop(Item item) {
+		this.drops.add(item);
+	}
+	
+	public void handlePickup(Item item) {
+		this.drops.remove(item);
+	}
+	
+	public void handlePlace(Block block) {
+		this.blocks.add(block);
+	}
+	
+	public void handleBreak(Block block) {
+		this.blocks.remove(block);
+	}
+	
 	public void connect(GamePlayer player) {
 		Player bukkit = player.getBukkit();
 		
-		for(Point point : points)
-			if(!point.hasOwner()) 
+		// Change scoreboard lines.
+		player.getScoreboard().switchLines(Values.SCOREBOARD_MAP);
+		
+		for(Point point : points) {
+			if(!point.hasOwner()) {
 				point.capture(bukkit);
+				return;
+			}
+		}
+		
+		// If no point is captured.
+		Messenger.console("&cERROR: No point is captured, "
+			+ "but called connect to map.");
+		return;
+	}
+	
+	public void disconnect(GamePlayer player) {
+		Player bukkit = player.getBukkit();
+		
+		for(Point point : points) {
+			if(point.getOwner().equals(bukkit)) {
+				point.toFree();
+				break;
+			}
+		}
+		
+		if(!game.getThread().isPrepare()) {
+			
+			Location location = bukkit.getLocation();
+			Inventory inventory = bukkit.getInventory();
+			ItemStack[] items = inventory.getContents();
+			
+			for(ItemStack item : items)
+				drops.add(location.getWorld()
+				.dropItem(location, item));
+			
+			inventory.clear();
+		}
+		
+		bukkit.teleport(Values.MAIN_LOBBY);
+		return;
 	}
 	
 	public void fillChests() {
@@ -84,7 +164,7 @@ public class GameMap {
 		for(Chest chest : chests) {
 			
 			Inventory inventory = chest.getInventory();
-			// TODO: random fill the chest.
+			// TODO: random fill the chest
 		}
 	}
 	
@@ -100,11 +180,29 @@ public class GameMap {
 		for(Point point : points)
 			point.toFree();
 		
+		// Delete dropped items.
+		for(Item item : drops)
+			if(item != null) 
+				item.remove();
+		
+		// Delete placed blocks;
+		for(Block block : blocks)
+			if(block != null)
+				block.setType(Material.AIR);
+		
+		// Clear the memory.
+		drops.clear();
+		blocks.clear();
+		
 		// Clear the inventory of chests.
 		clearChests();
 	}
 	
-	public class Area {
+	public static GameMap create(Game game, ProtectedRegion region) {
+		return new GameMap(game, new Area(region));
+	}
+	
+	public static class Area {
 		
 		private int xMin;
 		private int yMin;
@@ -123,23 +221,33 @@ public class GameMap {
 			this.zMax = region.getMaximumPoint().getBlockZ();
 		}
 		
-		public boolean checkXZ(Location location) {
+		public boolean checkXYZ(Location location) {
 			
 			int x = location.getBlockX();
+			int y = location.getBlockY();
 			int z = location.getBlockZ();
 			
 			return xMin <= x && x <= xMax
+				&& yMin <= y && y <= yMax
 				&& zMin <= z && z <= zMax;
 		}
 		
-		public boolean checkY(Location location) {
+		public boolean checkLowY(Location location) {
 			
 			int y = location.getBlockY();
-			return yMin <= y && y <= yMax;
+			return yMin <= y;
+		}
+		
+		public int getWidth() {
+			return xMax - xMin;
+		}
+		
+		public int getLenght() {
+			return zMax - zMin;
 		}
 	}
 	
-	public class Point {
+	public static class Point {
 		
 		private Location location;
 		private Player owner;

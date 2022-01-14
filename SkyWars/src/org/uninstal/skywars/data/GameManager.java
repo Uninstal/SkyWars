@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 
 public class GameManager {
 
@@ -18,6 +19,26 @@ public class GameManager {
 	
 	public static Game getGame(String id) {
 		return games.get(id);
+	}
+	
+	public static Game getGame(Player player) {
+		
+		for(Game game : games.values())
+			if(game.getState() == GameState.BATTLE
+			&& game.contains(player))
+				return game;
+		
+		return null;
+	}
+	
+	public static List<Game> getActiveGames() {
+		List<Game> list = new ArrayList<>();
+		
+		for(Game game : games.values())
+			if(game.getState() == GameState.BATTLE)
+				list.add(game);
+		
+		return list;
 	}
 	
 	public static void registerGame(Game game) {

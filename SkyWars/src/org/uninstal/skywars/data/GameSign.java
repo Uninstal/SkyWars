@@ -38,6 +38,7 @@ public class GameSign {
 		// Formatting lines.
 		for(int i = 0; i < 4; i++) {
 			String line = lines[i];
+			// TODO: sign lines api
 			line = line.replace("", "");
 			lines[i] = line;
 		}

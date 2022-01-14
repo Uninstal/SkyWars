@@ -1,63 +1,79 @@
 package org.uninstal.skywars.commands;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.uninstal.skywars.data.Game;
 import org.uninstal.skywars.data.GameManager;
+import org.uninstal.skywars.data.GameMap;
+import org.uninstal.skywars.util.Messenger;
+import org.uninstal.skywars.util.WorldGuard;
+
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 public class CommandSet extends SWCommand {
 	
-	private final Map<String, SetFunction<Game, Player, String>> functions = new HashMap<>();
-
 	public CommandSet(int minArgs, String permission) {
 		super(minArgs, permission);
-		
-		functions.put("min", (g, p, v) -> g.getConfig().setMinPlayers(Integer.valueOf(v)));
-		functions.put("max", (g, p, v) -> g.getConfig().setMaxPlayers(Integer.valueOf(v)));
-		functions.put("setlobby", (g, p, v) -> g.getLobby().setLocation(p.getLocation()));
 	}
 	
 	@Override
 	public boolean run(Player sender, String[] args) {
 		
-		if(args.length < 3) {
-			
-			// Send help message.
+		if(args.length < 2) {
+			// MESSAGE
 			return false;
 		}
 		
-		String id = args[1];
-		Game game = GameManager.getGame(id);
+		String gameId = args[1];
 		String param = args[2];
-		String value = args[3];
+		String value = args.length > 3 ? args[3] : null;
+		Game game = GameManager.getGame(gameId);
 		
-		SetReturn setReturn = null;
-		
-		try {
-			functions.get(param).apply(game, sender, value);
-			setReturn = SetReturn.ACCEPT;
-		} catch (Exception e) {
-			setReturn = SetReturn.EXCEPTION;
-		}
-		
-		if(setReturn == SetReturn.ACCEPT) {
-			// Send accept message.
-		} else if(setReturn == SetReturn.EXCEPTION) {
-			// Send exception message.
-		}
+		Messenger.protectNaN(sender, () -> {
+			
+			if(param.equalsIgnoreCase("lobby")) {
+				
+				Location location = sender.getLocation();
+				game.getLobby().setLocation(location);
+				// MESSAGE
+				return;
+			}
+			
+			else if(param.equalsIgnoreCase("min")) {
+				
+				int valueInt = Integer.valueOf(value);
+				game.getConfig().setMinPlayers(valueInt);
+				// MESSAGE
+				return;
+			}
+			
+			else if(param.equalsIgnoreCase("max")) {
+				
+				int valueInt = Integer.valueOf(value);
+				game.getConfig().setMaxPlayers(valueInt);
+				// MESSAGE
+				return;
+			}
+			
+			else if(param.equalsIgnoreCase("map")) {
+				
+				if(WorldGuard.hasRegion(value)) {
+					
+					ProtectedRegion region = WorldGuard.getRegion(value);
+					game.setMap(GameMap.create(game, region));
+					
+					// MESSAGE
+					return;
+				}
+				
+				else {
+					
+					// MESSAGE
+					return;
+				}
+			}
+		});
 		
 		return true;
-	}
-	
-	private interface SetFunction<K, L, V> {
-		
-		void apply(K k, L l, V v);
-	}
-	
-	private enum SetReturn {
-		
-		ACCEPT, EXCEPTION;
 	}
 }

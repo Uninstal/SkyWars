@@ -1,0 +1,7 @@
+name: SkyWars
+main: org.uninstal.skywars.Main
+version: 1.0
+commands:
+  skywars:
+    description: Main command.
+    aliases: [sw]

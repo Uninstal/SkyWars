@@ -15,15 +15,11 @@ public class CommandCreate extends SWCommand {
 	public boolean run(Player sender, String[] args) {
 		
 		String id = args[1];
-		int min = Integer.valueOf(args[2]);
-		int max = Integer.valueOf(args[3]);
-		
-		GameConfig config = new GameConfig(id, min, max);
+		GameConfig config = new GameConfig(id);
 		Game game = new Game(config);
 		GameManager.registerGame(game);
 		
-		// Message.
-		sender.sendMessage("");
+		// MESSAGE
 		return true;
 	}
 }

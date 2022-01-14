@@ -6,12 +6,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.uninstal.skywars.Main;
 import org.uninstal.skywars.util.Utils;
+import org.uninstal.skywars.util.Values;
 
 public class GameThread extends BukkitRunnable {
 	
 	private boolean running;
 	private int starting;
 	private int prepare;
+	private int time;
 	private Game game;
 	
 	public GameThread(Game game) {
@@ -20,8 +22,12 @@ public class GameThread extends BukkitRunnable {
 		this.game = game;
 	}
 	
+	public int getRemainTime() {
+		return time;
+	}
+	
 	public void start() {
-		runTaskTimerAsynchronously(Main.INSTANCE, 0L, 20L);
+		this.runTaskTimerAsynchronously(Main.INSTANCE, 0L, 20L);
 	}
 	
 	public int getStarting() {
@@ -35,48 +41,122 @@ public class GameThread extends BukkitRunnable {
 	public boolean isRunning() {
 		return running;
 	}
+	
+	public void setRunning(boolean running) {
+		this.running = running;
+	}
+	
+	public void startBattle() {
+		prepare = Values.GAME_PREPARE_TIME;
+		time = Values.GAME_GLOBAL_TIME;
+		// Start.
+		game.setState(GameState.BATTLE);
+		// Teleport players to map.
+		game.getLobby().teleportToMap();
+		// Actions on participants.
+		game.getPlayers().forEach(gp -> {
+			Player player = gp.getBukkit();
+			// Freeze the player.
+			Utils.freeze(player);
+		});
+		// Fill the chests.
+		game.getMap().fillChests();
+	}
+	
+	public void stopWithoutWinner() {
+		
+		game.getPlayers().forEach(gp -> {
+			Player player = gp.getBukkit();
+			// Teleport on main lobby.
+			game.getMap().disconnect(gp);
+			// MESSAGE
+		});
+		
+		// Reset.
+		game.reset();
+		// Set waiting state.
+		game.setState(GameState.WAIT);
+		return;
+	}
+	
+	public void stop(String winner) {
+		
+		game.getPlayers().forEach(gp -> {
+			Player player = gp.getBukkit();
+			// Teleport on main lobby.
+			game.getMap().disconnect(gp);
+			// MESSAGE
+		});
+		
+		// Reset.
+		game.reset();
+		// Set waiting state.
+		game.setState(GameState.WAIT);
+		return;
+	}
+	
+	public void handleConnection() {
+		this.starting = Values.GAME_STARTING_TIME;
+		if(!isRunning()) start();
+	}
 
 	@Override
 	public void run() {
 		if(!running) cancel();
 		
+		// A little optimization.
+		if(Values.THREAD_OPTIMIZATION) {
+			if(game.getPlayers().size() == 0) {
+				cancel();
+				return;
+			}
+		}
+		
 		if(game.getState() == GameState.STARTING) {
 			
 			if(starting == 0) {
-				prepare = 5;
-				// Start.
-				game.setState(GameState.BATTLE);
-				// Actions on participants.
-				game.getPlayers().forEach(gp -> {
-					Player player = gp.getBukkit();
-					// Teleport on map.
-					
-					// Freeze the player.
-					Utils.freeze(player);
-				});
+				startBattle();
 				return;
-			}
-			
-			starting++;
-			return;
+			} else --starting;
 		}
 		
-		if(game.getState() == GameState.BATTLE) {
+		else if(game.getState() == GameState.BATTLE) {
 			
+			// If prepare state.
 			if(isPrepare()) {
 				
 				// Play prepare sound.
 				Sound sound = prepare == 1 ? Sound.BLOCK_NOTE_CHIME : Sound.BLOCK_NOTE_PLING;
-				game.getPlayers().forEach(p -> {
+				game.getPlayers().forEach(gp -> {
 					
-					Player player = p.getBukkit();
+					Player player = gp.getBukkit();
 					Location location = player.getLocation();
-					player.playSound(location, sound, 1F, 1F);
+					player.playSound(location, sound, 5F, 1F);
 				});
 				
-				prepare--;
+				if(prepare == 1) {
+					
+					// Unfreeze players.
+					game.getPlayers().forEach(gp -> {
+						Utils.unfreeze(gp.getBukkit());
+					});
+				}
+				
+				--prepare;
 				return;
 			}
+			
+			// If time is out.
+			if(time == 0) {
+				
+				// Stop game because time is out.
+				stopWithoutWinner();
+				return;
+			} else --time;
 		}
+		
+		// Update the game.
+		game.update();
+		return;
 	}
 }
