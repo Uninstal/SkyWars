@@ -1,7 +1,9 @@
 package org.uninstal.skywars.data;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -21,12 +23,12 @@ public class GameMap {
 	
 	private final Game game;
 	private final Area area;
-	private List<Point> points;
+	private Map<Integer, Point> points;
 	private List<Chest> chests;
 	private List<Item> drops;
 	private List<Block> blocks;
 	
-	public GameMap(Game game, Area area, List<Point> points, List<Chest> chests) {
+	public GameMap(Game game, Area area, Map<Integer, Point> points, List<Chest> chests) {
 		this.game = game;
 		this.area = area;
 		this.chests = chests;
@@ -34,7 +36,7 @@ public class GameMap {
 		this.drops = new ArrayList<>();
 	}
 	
-	public GameMap(Game game, Area area, List<Point> points) {
+	public GameMap(Game game, Area area, Map<Integer, Point> points) {
 		this.game = game;
 		this.area = area;
 		this.chests = new ArrayList<>();
@@ -46,7 +48,7 @@ public class GameMap {
 		this.game = game;
 		this.area = area;
 		this.chests = new ArrayList<>();
-		this.points = new ArrayList<>();
+		this.points = new HashMap<>();
 		this.drops = new ArrayList<>();
 	}
 	
@@ -54,15 +56,15 @@ public class GameMap {
 		this.game = game;
 		this.area = null;
 		this.chests = new ArrayList<>();
-		this.points = new ArrayList<>();
+		this.points = new HashMap<>();
 		this.drops = new ArrayList<>();
 	}
 	
 	public boolean isConfigured() {
 		
 		return area != null
-			&& points.size() > 1
-			&& chests.size() > 1;
+			&& chests.size() > 1
+			&& points.size() == game.getConfig().getMaxPlayers();
 	}
 	
 	public Game getGame() {
@@ -81,20 +83,24 @@ public class GameMap {
 		this.chests = chests;
 	}
 	
-	public void registerChest(Chest chest) {
+	public void addChest(Chest chest) {
 		this.chests.add(chest);
+	}
+	
+	public void addPoint(int id, Point point) {
+		points.put(id, point);
+	}
+	
+	public void addPoint(int id, Location location) {
+		points.put(id, new Point(location));
 	}
 	
 	public Point getPoint(int id) {
 		return points.get(id);
 	}
 	
-	public void addPoint(Point point) {
-		points.add(point);
-	}
-	
-	public void addPoint(Location location) {
-		points.add(new Point(location));
+	public Map<Integer, Point> getPoints() {
+		return points;
 	}
 	
 	public void handleDrop(Item item) {
@@ -119,7 +125,7 @@ public class GameMap {
 		// Change scoreboard lines.
 		player.getScoreboard().switchLines(Values.SCOREBOARD_MAP);
 		
-		for(Point point : points) {
+		for(Point point : points.values()) {
 			if(!point.hasOwner()) {
 				point.capture(bukkit);
 				return;
@@ -135,7 +141,7 @@ public class GameMap {
 	public void disconnect(GamePlayer player) {
 		Player bukkit = player.getBukkit();
 		
-		for(Point point : points) {
+		for(Point point : points.values()) {
 			if(point.getOwner().equals(bukkit)) {
 				point.toFree();
 				break;
@@ -155,7 +161,7 @@ public class GameMap {
 			inventory.clear();
 		}
 		
-		bukkit.teleport(Values.MAIN_LOBBY);
+		bukkit.teleport(GameLobby.getMainLobby());
 		return;
 	}
 	
@@ -177,7 +183,7 @@ public class GameMap {
 	public void reset() {
 		
 		// Remove data from points.
-		for(Point point : points)
+		for(Point point : points.values())
 			point.toFree();
 		
 		// Delete dropped items.

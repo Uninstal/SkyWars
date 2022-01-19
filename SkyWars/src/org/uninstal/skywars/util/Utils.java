@@ -2,8 +2,12 @@ package org.uninstal.skywars.util;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.uninstal.skywars.Main;
@@ -11,6 +15,7 @@ import org.uninstal.skywars.Main;
 public class Utils {
 	
 	private final static PotionEffect effect = new PotionEffect(PotionEffectType.SLOW, 10000, 255);
+	private final static ItemStack incorrectItem = new ItemStack(Material.AIR);
 	
 	public static void freeze(Player player) {
 		player.addPotionEffect(effect);
@@ -54,6 +59,43 @@ public class Utils {
 			return new Location(world, x, y, z);
 		}
 		
+		return null;
+	}
+	
+	public static ItemStack itemBuild(String format) {
+		
+		try {
+			String[] args = format.split(",");
+			String material = args[0];
+			short id = 1;
+			if(material.contains(":")) {
+				material = material.substring(0, material.indexOf(":"));
+				id = Short.valueOf(material.substring(material.indexOf(":") + 1));
+			}
+			int amount = 1;
+			if(args.length > 1)
+				amount = Integer.valueOf(args[1]);
+			
+			ItemStack item = new ItemStack(Material.valueOf(material), amount, id);
+			if(args.length > 2) {
+				
+				ItemMeta itemMeta = item.getItemMeta();
+				String displayName = args[2];
+				displayName = displayName.replace("&", "§");
+				itemMeta.setDisplayName(displayName);
+				item.setItemMeta(itemMeta);
+			}
+			
+			return item;
+		} catch (Exception e) {
+			Messenger.console(Values.LOG_INCORRECT_ITEM
+				.replace("<format>", format));
+			return incorrectItem;
+		}
+	}
+	
+	public static ItemStack itemBuild(ConfigurationSection section) {
+		// TODO: item build
 		return null;
 	}
 	

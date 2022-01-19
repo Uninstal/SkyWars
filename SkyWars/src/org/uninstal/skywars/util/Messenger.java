@@ -51,7 +51,7 @@ public class Messenger {
 		try {
 			code.run();
 		} catch (NumberFormatException e) {
-			target.sendMessage(Values.PLAYER_NUMBER_ERROR);
+			target.sendMessage(Values.COMMAND_NUMBER_ERROR);
 			return;
 		}
 	}

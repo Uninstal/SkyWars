@@ -5,9 +5,10 @@ import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.uninstal.skywars.util.Utils;
-import org.uninstal.skywars.util.Values;
 
 public class GameLobby {
+	
+	private static Location MAIN_LOBBY;
 	
 	private Game game;
 	private Location location;
@@ -35,7 +36,7 @@ public class GameLobby {
 	
 	public void disconnect(Player player) {
 		// Teleport in main lobby.
-		player.teleport(Values.MAIN_LOBBY);
+		player.teleport(MAIN_LOBBY);
 		// Remove from data.
 		players.remove(player);
 	}
@@ -60,5 +61,13 @@ public class GameLobby {
 	
 	public static GameLobby create(Game game, String format) {
 		return new GameLobby(game, (Location) Utils.parse(format));
+	}
+	
+	public static Location getMainLobby() {
+		return MAIN_LOBBY;
+	}
+	
+	public static void setMainLobby(Location location) {
+		MAIN_LOBBY = location;
 	}
 }

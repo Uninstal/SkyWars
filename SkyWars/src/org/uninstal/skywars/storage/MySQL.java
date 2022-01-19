@@ -24,8 +24,7 @@ public class MySQL implements Storage {
 	
 	private Connection connection;
 	
-	@Override
-	public void init() {
+	private void connect() {
 		
 		String host = Values.MYSQL_HOST;
 		String base = Values.MYSQL_BASE;
@@ -44,6 +43,11 @@ public class MySQL implements Storage {
 			Messenger.console(Values.LOG_ERROR_MESSAGE.replace("<message>", e.getMessage()));
 			return;
 		}
+	}
+	
+	@Override
+	public void init() {
+		this.connect();
 		
 		String create = "CREATE TABLE IF NOT EXISTS " + table + " (" + types + ")";
 		String alter = "ALTER TABLE " + table + " CONVERT TO CHARACTER SET utf8";
@@ -63,6 +67,18 @@ public class MySQL implements Storage {
 
 	@Override
 	public int save() {
+		
+		try {
+			
+			if(connection == null || connection.isClosed())
+				this.connect();
+			
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		
 		return 0;
 	}
 
@@ -70,6 +86,9 @@ public class MySQL implements Storage {
 	public int load() {
 		
 		try {
+			
+			if(connection == null || connection.isClosed())
+				this.connect();
 
 			String command = "SELECT * FROM " + table;
 			Statement statement = connection.createStatement();

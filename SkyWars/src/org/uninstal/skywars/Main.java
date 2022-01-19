@@ -3,6 +3,7 @@ package org.uninstal.skywars;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,6 +22,7 @@ public class Main extends JavaPlugin {
 	
 	public static Main INSTANCE;
 	public static Storage STORAGE;
+	
 	private static Files files;
 	private static Map<String, SWCommand> commands;
 	
@@ -42,7 +44,7 @@ public class Main extends JavaPlugin {
 		
 		// Load datas.
 		Runnable run = () -> {
-			STORAGE = Storage.of("yaml");
+			STORAGE = Storage.of(Values.STORAGE_TYPE);
 			STORAGE.init();
 			
 			int loaded = STORAGE.load();
@@ -55,7 +57,7 @@ public class Main extends JavaPlugin {
 					Values.AUTOSAVE_TICKS);
 		};
 		
-		if(Values.ASYNC_DATAS_LOAD) 
+		if(Values.STORAGE_ASYNC) 
 			Utils.async(run);
 		else run.run();
 		
@@ -64,18 +66,27 @@ public class Main extends JavaPlugin {
 		commands.put("create", new CommandCreate(2, "skywars.game.create"));
 		commands.put("set", new CommandSet(1, "skywars.game.set"));
 		commands.put("start", new CommandStart(2, "skywars.game.start"));
+		
+		// Registering event handler.
+		Bukkit.getPluginManager().registerEvents(new Handler(), this);
 	}
 	
 	@Override
 	public void onDisable() {
 		
 		// Save datas.
-		int saved = STORAGE.save();
-		if(saved != 0){
-			String log = Values.LOG_GAMES_SAVE
-				.replace("<value>", String.valueOf(saved));
-			Messenger.console(log);
-		}
+		Runnable run = () -> {
+			int saved = STORAGE.save();
+			if(saved != 0){
+				String log = Values.LOG_GAMES_SAVE
+					.replace("<value>", String.valueOf(saved));
+				Messenger.console(log);
+			}
+		};
+		
+		if(Values.STORAGE_ASYNC)
+			Utils.async(run);
+		else run.run();
 	}
 	
 	@Override
@@ -100,7 +111,7 @@ public class Main extends JavaPlugin {
 				String perm = cmd.getPermission();
 				
 				if(!sender.hasPermission(perm)) {
-					sender.sendMessage(Values.PLAYER_PERMISSION_ERROR);
+					sender.sendMessage(Values.COMMAND_PERMISSION_ERROR);
 					return false;
 				}
 				

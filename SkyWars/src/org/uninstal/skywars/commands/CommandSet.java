@@ -1,11 +1,16 @@
 package org.uninstal.skywars.commands;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
 import org.uninstal.skywars.data.Game;
+import org.uninstal.skywars.data.GameLobby;
 import org.uninstal.skywars.data.GameManager;
 import org.uninstal.skywars.data.GameMap;
 import org.uninstal.skywars.util.Messenger;
+import org.uninstal.skywars.util.Values;
 import org.uninstal.skywars.util.WorldGuard;
 
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
@@ -29,12 +34,25 @@ public class CommandSet extends SWCommand {
 		String value = args.length > 3 ? args[3] : null;
 		Game game = GameManager.getGame(gameId);
 		
+		if(game == null) {
+			// MESSAGE
+			return false;
+		}
+		
 		Messenger.protectNaN(sender, () -> {
 			
 			if(param.equalsIgnoreCase("lobby")) {
 				
 				Location location = sender.getLocation();
 				game.getLobby().setLocation(location);
+				// MESSAGE
+				return;
+			}
+			
+			else if(param.equalsIgnoreCase("mainlobby")) {
+				
+				Location location = sender.getLocation();
+				GameLobby.setMainLobby(location);
 				// MESSAGE
 				return;
 			}
@@ -71,6 +89,62 @@ public class CommandSet extends SWCommand {
 					// MESSAGE
 					return;
 				}
+			}
+			
+			else if(param.equalsIgnoreCase("point")) {
+				
+				GameMap gameMap = game.getMap();
+				Location location = sender.getLocation();
+				int id = 0;
+				
+				if(args.length == 3) {
+					id = gameMap.getPoints().size() + 1;
+					
+					gameMap.addPoint(id, location);
+					sender.sendMessage(Values.COMMAND_SET_POINT
+						.replace("<id>", String.valueOf(id)));
+					return;
+				}
+				
+				else {
+					id = Integer.valueOf(value);
+					
+					if(!gameMap.getArea().checkXYZ(location)) {
+						sender.sendMessage(Values.COMMAND_SET_POINT_REGION_ERROR);
+						return;
+					}
+					
+					if(id > game.getConfig().getMaxPlayers()
+						|| id < 1) {
+						sender.sendMessage(Values.COMMAND_SET_POINT_RANGE_ERROR);
+						return;
+					}
+					
+					gameMap.addPoint(id, location);
+					sender.sendMessage(Values.COMMAND_SET_POINT
+						.replace("<id>", String.valueOf(id)));
+					return;
+				}
+			}
+			
+			else if(param.equalsIgnoreCase("chest")) {
+
+				GameMap gameMap = game.getMap();
+				Block block = sender.getTargetBlock(null, 4);
+				
+				if(!gameMap.getArea().checkXYZ(block.getLocation())) {
+					sender.sendMessage(Values.COMMAND_SET_CHEST_REGION_ERROR);
+					return;
+				}
+				
+				if(block.getType() != Material.CHEST) {
+					sender.sendMessage(Values.COMMAND_SET_CHEST_MATERIAL_ERROR);
+					return;
+				}
+				
+				gameMap.addChest((Chest) block);
+				sender.sendMessage(Values.COMMAND_SET_CHEST);
+				return;
 			}
 		});
 		
